@@ -789,7 +789,8 @@ Raphael.g = {
         return { from: f, to: t, power: i };
     },
 
-    axis: function (x, y, length, from, to, steps, orientation, labels, type, dashsize, paper) {
+    axis: function (x, y, length, from, to, steps, orientation, labels, type, dashsize, label_rotation, paper) {
+        label_rotation = (typeof(label_rotation) == 'undefined') ? 0 : label_rotation;
         dashsize = dashsize == null ? 2 : dashsize;
         type = type || "t";
         steps = steps || 10;
@@ -808,16 +809,30 @@ Raphael.g = {
         d = (t - f) / steps;
 
         var label = f,
-            rnd = i > 0 ? i : 0;
-            dx = length / steps;
+            rnd = i > 0 ? i : 0,
+            dx = length / steps,
+            txt = null;
 
         if (+orientation == 1 || +orientation == 3) {
             var Y = y,
+                prev = Infinity,
                 addon = (orientation - 1 ? 1 : -1) * (dashsize + 3 + !!(orientation - 1));
 
             while (Y >= y - length) {
                 type != "-" && type != " " && (path = path.concat(["M", x - (type == "+" || type == "|" ? dashsize : !(orientation - 1) * dashsize * 2), Y + .5, "l", dashsize * 2 + 1, 0]));
-                text.push(paper.text(x + addon, Y, (labels && labels[j++]) || (Math.round(label) == label ? label : +label.toFixed(rnd))).attr(txtattr).attr({ "text-anchor": orientation - 1 ? "start" : "end" }));
+                text.push(txt = paper.text(x + addon, Y, (labels && labels[j++]) || (Math.round(label) == label ? label : +label.toFixed(rnd))).attr(txtattr).attr({ "text-anchor": orientation - 1 ? "start" : "end" }));
+                
+                // rotate label
+                txt.rotate(label_rotation);
+                
+                // remove label if too close to previous label
+                var bb = txt.getBBox();
+                if (prev <= bb.y - 2) {
+                    text.pop(text.length - 1).remove();
+                } else {
+                    prev = bb.y + bb.height;
+                }
+                
                 label += d;
                 Y -= dx;
             }
@@ -834,15 +849,18 @@ Raphael.g = {
             var X = x,
                 dx = length / steps,
                 txt = 0,
-                prev = 0;
+                prev = -Infinity;
 
             while (X <= x + length) {
                 type != "-" && type != " " && (path = path.concat(["M", X + .5, y - (type == "+" ? dashsize : !!orientation * dashsize * 2), "l", 0, dashsize * 2 + 1]));
                 text.push(txt = paper.text(X, y + addon, (labels && labels[j++]) || (Math.round(label) == label ? label : +label.toFixed(rnd))).attr(txtattr));
+                
+                // rotate label
+                txt.rotate(label_rotation);
 
+                // remove label if too close to previous label
                 var bb = txt.getBBox();
-
-                if (prev >= bb.x - 5) {
+                if (prev >= bb.x - 2) {
                     text.pop(text.length - 1).remove();
                 } else {
                     prev = bb.x + bb.width;
